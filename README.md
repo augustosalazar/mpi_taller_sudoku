@@ -28,12 +28,6 @@ Todos los tableros:
 docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py --all
 ```
 
-Medir la tarea MPI con cada `N` hasta `nproc` y elegir el más rápido:
-
-```bash
-docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/detectar_procesos_mpi.py
-```
-
 ### Windows (PowerShell)
 
 ```powershell
@@ -52,12 +46,6 @@ Todos los tableros:
 docker run --rm -v "${PWD}:/app" augustosalazar/slim-mpi:2 python /app/baseline_secuencial.py --all
 ```
 
-Medir la tarea MPI con cada `N` hasta `nproc` y elegir el más rápido:
-
-```powershell
-docker run --rm -v "${PWD}:/app" augustosalazar/slim-mpi:2 python /app/detectar_procesos_mpi.py
-```
-
 Para leer otro archivo ubicado en la carpeta del proyecto, usa su ruta **dentro del contenedor**:
 
 ```powershell
@@ -67,6 +55,21 @@ docker run --rm -v "${PWD}:/app" augustosalazar/slim-mpi:2 python /app/baseline_
 La salida muestra el ID y si se resolvió cada tablero; no imprime las respuestas. Con `--id` muestra el tiempo de ese tablero. Con `--all` muestra el **tiempo parcial de cada tablero en cuanto termina** y el **tiempo total** al final. El tiempo total es la suma de los tiempos de búsqueda medidos con `time.perf_counter()`; no incluye lectura del archivo ni impresión de resultados.
 
 Los 30 tableros incluidos tienen solución única. Al seleccionarlos en este contenedor, cada uno tardó aproximadamente entre 2 y 10 segundos con el backtracking serial. Una ejecución completa con `--all` tardó **111,72 segundos**. Los tiempos variarán según el equipo; usa el mismo archivo y entorno al comparar la versión serial con MPI.
+
+## Elegir `N` por equipo
+
+Ejecuta el siguiente comando para determinar el mejor `N` del equipo en que se va a realizar el informe. El programa cuenta números primos como tarea independiente del Sudoku, prueba cada `N` desde 1 hasta `nproc` y mide tres veces cada valor. Copia ese valor en el informe y úsalo en las tres implementaciones MPI; no necesitas calcularlo.
+
+### Windows (PowerShell)
+
+```powershell
+docker run --rm -v "${PWD}:/app" augustosalazar/slim-mpi:2 python /app/detectar_procesos_mpi.py
+```
+
+### macOS (Terminal)
+```bash
+docker run --rm -v "$(pwd):/app" augustosalazar/slim-mpi:2 python /app/detectar_procesos_mpi.py
+```
 
 ## Formato de `seeds.txt`
 
@@ -90,9 +93,7 @@ El lector supone que las seeds del archivo tienen el formato indicado y son vál
 
 - `baseline_secuencial.py` lee `seeds.txt`, selecciona los IDs, llama al resolvedor y muestra el tiempo parcial de cada tablero y el total.
 - `sudoku.py` resuelve un tablero por backtracking y ofrece `resolver_con_tiempo(tablero)`, que devuelve `(resuelto, segundos)`.
-- `detectar_procesos_mpi.py` cuenta números primos hasta 2 000 000, reparte el trabajo entre procesos MPI y mide tres veces cada `N` desde 1 hasta `nproc`. Usa `--use-hwthread-cpus --oversubscribe` para que MPI permita ejecutar también valores mayores que sus slots habituales. Calcula automáticamente cuál obtuvo la menor mediana y lo imprime como `N RECOMENDADO`; no hay que hacer cálculos manuales. Esta tarea es independiente del Sudoku.
-
-La calibración completa puede tardar varios minutos. Para una comprobación rápida, agrega `--limite 100000 --repeticiones 1` al final del comando. Usa la calibración completa para elegir el `N` del informe.
+- `detectar_procesos_mpi.py` calibra el valor común de `N` con una tarea de conteo de primos.
 
 `resolver()` modifica el tablero recibido. El programa principal hace una copia antes de cada búsqueda para conservar la seed original.
 
@@ -104,4 +105,4 @@ Implementa las tres propuestas en carpetas separadas. Cada carpeta contiene la c
 2. [mpi_por_ramas](mpi_por_ramas/README.md): recorrer los 30 IDs en orden con `--all` y repartir entre procesos las ramas de cada tablero; terminar uno antes de comenzar el siguiente.
 3. [mpi_hibrido](mpi_hibrido/README.md): combinar el reparto de IDs con el reparto de ramas dentro de cada tablero.
 
-Entrega también el [informe de resultados](INFORME.md) con los tiempos de la versión secuencial y de las tres implementaciones y conclusiones sustentadas por esas mediciones. Elige **un solo valor de `N` por equipo** con el procedimiento de calibración del informe y usa ese mismo `N` en las tres comparaciones MPI. Agrega `--allow-run-as-root --use-hwthread-cpus --oversubscribe` a `mpiexec` en las tres implementaciones, como en el calibrador. Para MPI, mide el tiempo real desde que empieza el trabajo hasta que llegan todos los resultados; no sumes los tiempos de los procesos como tiempo total.
+Entrega también el [informe de resultados](INFORME.md) con los tiempos de la versión secuencial y de las tres implementaciones y conclusiones sustentadas por esas mediciones. Elige **un solo valor de `N` por equipo** con la calibración descrita arriba y usa ese mismo `N` en las tres comparaciones MPI. Agrega `--allow-run-as-root --use-hwthread-cpus --oversubscribe` a `mpiexec` en las tres implementaciones, como en el calibrador. Para MPI, mide el tiempo real desde que empieza el trabajo hasta que llegan todos los resultados; no sumes los tiempos de los procesos como tiempo total.
